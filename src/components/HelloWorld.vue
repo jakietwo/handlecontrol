@@ -4,11 +4,16 @@
 
     <div class="wrapper"></div>
     <div class="drap" draggable="true">移动</div>
-
+    <img class="left" src="@/common/img/left.png"/>
+    <img class="right" src="@/common/img/left.png"/>
+    <img class="top" src="@/common/img/left.png"/>
+    <img class="bottom" src="@/common/img/left.png"/>
   </div>
 </template>
 
 <script>
+  import localtion from '@/common/img/location1.png'
+
   export default {
     name: 'HelloWorld',
     data() {
@@ -18,12 +23,15 @@
         tanx: '', // 计算的触摸角度
         map: '', // 绑定map实例到vue
         center: [116.73, 39.04], // 初始化地图中心点
-        circleMarker: '', // 全局调用坐标点
+        marker: '', // 全局调用坐标点
         setInvelId: '',
+        setInvelId2: '',
         detance: 0, // 保存用户拖拉距离
+        pathLineArr: [] , // 画线的数组
       }
     },
     mounted() {
+      this.pathLineArr.push([this.x,this.y])
       this._initmap()
       let vm = this
       let dom = document.getElementsByClassName('drap')[0]
@@ -37,7 +45,10 @@
         if (touches) {
           vm.setInvelId = setInterval(() => {
             vm.handleManMove()
-          },5)
+          }, 2)
+          vm.setInvelId2 = setInterval(()=> {
+            vm.paintLine()
+          },1000)
         }
       })
       dom.addEventListener('touchmove', function (e) {
@@ -66,30 +77,29 @@
           dom.style.left = posX - 25 + 'px'
           dom.style.top = posY - 25 + 'px'
         }
-        // 设置一个定时器 任务移动
-        // if (e.touches.length){
-        //   vm.handleManMove(vm.tanx, detance)
-        // }
       })
+
       dom.addEventListener('touchend', function (ev) {
         dom.style.left = originX - 25 + 'px'
         dom.style.top = originY - 25 + 'px'
         dom.style.transition = 'all .2s'
         clearInterval(vm.setInvelId)
+        clearInterval(vm.setInvelId2)
       })
     },
     methods: {
       _initmap() {
         this.map = new AMap.Map('map1', {
-          zoom: 12,
+          zoom: 14,
           center: this.center
         })
-        this.circleMarker = new AMap.CircleMarker({
+        this.marker = new AMap.Marker({
           center: this.center,
-          strokeColor: 'white',
-          radius: 6,
+          icon: localtion,
+          autoRotation: true,
+          offset: new AMap.Pixel(-12, -12)
         })
-        this.circleMarker.setMap(this.map)
+        this.marker.setMap(this.map)
       },
       // 计算人员移动
       handleManMove() {
@@ -97,25 +107,43 @@
         // console.log('1111', this.detance)
         let speed
         if (this.detance) {
-          if(this.detance <=4800 ){
+          if (this.detance <= 4800) {
             speed = (this.detance / 1000000000).toPrecision(3)
-          }else {
-            speed = (4800/ 1000000000).toPrecision(3)
+          } else {
+            speed = (4800 / 1000000000).toPrecision(3)
           }
         } else {
           speed = 0
         }
-
         // console.log('速度',speed)
         // 计算在速度下的X,Y 坐标 移动速度
-        let speedX = speed * (Math.cos(Math.PI / 180  * this.tanx).toPrecision(2))
-        let speedY = speed * (Math.sin(Math.PI / 180  * this.tanx).toPrecision(2))
+        let speedX = speed * (Math.cos(Math.PI / 180 * this.tanx).toPrecision(2))
+        let speedY = speed * (Math.sin(Math.PI / 180 * this.tanx).toPrecision(2))
         // console.log('速度x',speedX)
         // console.log('速度y',speedY)
         this.x += speedX
         this.y += speedY
         let position = new AMap.LngLat(this.x, this.y)
-        this.circleMarker.setCenter(position)
+        let angle = parseInt(-this.tanx)
+        console.log('定时器1')
+        this.marker.setAngle(angle)
+        this.marker.setPosition(position)
+      },
+      // 画走过的路线
+      paintLine() {
+        let arr = [this.x,this.y]
+        this.pathLineArr.push(arr)
+        console.log('定时器2')
+
+        let pathline = new AMap.Polyline({
+          path: this.pathLineArr,
+          borderWeight: 8,
+          strokeColor: 'green',
+          lineJoin: 'round',
+          lineCap: 'round',
+          showDir: true
+        })
+        this.map.add(pathline)
       }
     }
   }
@@ -141,10 +169,24 @@
     box-shadow: 0 0 4px rgba(7, 17, 27, .1);
   }
 
+  .wrapper:after {
+    content: '';
+    display: block;
+    position: relative;
+    z-index: 15;
+    top: 30px;
+    left: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: white;
+    opacity: .4;
+    border-radius: 50%;
+  }
+
   .drap {
     position: absolute;
     z-index: 20;
-    bottom: 85px;
+    bottom: 100px;
     left: 85px;
     line-height: 50px;
     width: 50px;
@@ -152,5 +194,33 @@
     border-radius: 50%;
     background-color: orange;
     box-sizing: content-box;
+  }
+
+  .top, .left, .right, .bottom {
+    position: absolute;
+    z-index: 15;
+  }
+
+  .top {
+    bottom: 155px;
+    left: 98px;
+    transform: rotate(90deg);
+  }
+
+  .left {
+    bottom: 113px;
+    left: 55px;
+  }
+
+  .right {
+    bottom: 113px;
+    left: 140px;
+    transform: rotate(-180deg);
+  }
+
+  .bottom {
+    bottom: 70px;
+    left: 98px;
+    transform: rotate(-90deg);
   }
 </style>
